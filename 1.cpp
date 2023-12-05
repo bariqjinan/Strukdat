@@ -23,6 +23,8 @@ int main()
     cout << "Masukkan Judul Lagu: " << endl;
     getline(cin, first->judul);
 
+    cout << "asjdsa" << endl;
+
     string judul = first->judul + ext;
 
     cout << first->judul << endl;
