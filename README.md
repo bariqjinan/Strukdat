@@ -1,4 +1,8 @@
 # Strukdat
+PREQUISITE:
+harus memanggil library -lwinmm untuk bisa memutar musik
+harus memanggil dirent.h dan yang lainnya untuk bisa membaca file yang ada folder
+
 
 MENU : 
 1. Tambah Lagu
