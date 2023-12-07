@@ -1,7 +1,9 @@
 # Strukdat
 PREQUISITE:
-harus memanggil library -lwinmm untuk bisa memutar musik
-harus memanggil dirent.h dan yang lainnya untuk bisa membaca file yang ada folder
+- harus manggil library -lurlmon buat download lagu
+- harus memanggil library -lwinmm untuk bisa memutar musik
+- harus memanggil dirent.h dan yang lainnya untuk bisa membaca file yang ada folder
+- kebutuhan linkernya: -lwinmm, -D_DIRENT_HAVE_D_TYPE, -lurlmon
 
 
 MENU : 
