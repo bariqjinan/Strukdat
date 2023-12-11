@@ -1,62 +1,62 @@
 #include <iostream>
-#include <winsock2.h>
 #include <windows.h>
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <dirent.h>
 #include <fstream>
 #include <curl/curl.h>
 #include <string>
 #include "MMSystem.h"
-#include <winnt.h>
 #include <pthread.h>
+#include <direct.h>
 
 using namespace std;
 
-string loc = "Musik\\";
-string ext = ".wav";
+const string loc = "C:\\Users\\lenovo\\OneDrive\\Desktop\\Projek Struktur Data\\Musik\\";
+const string ext = ".wav";
 
-struct lagu
+struct Lagu
 {
     string judul;
-    lagu *next;
-    lagu *prev;
+    Lagu* next;
+    Lagu* prev;
 };
 
-struct playlist
+struct Playlist
 {
     string nama;
-    lagu *laguHead;
-    playlist *next;
-    playlist *prev;
+    Lagu* laguHead;
+    Playlist* next;
+    Playlist* prev;
 };
 
-typedef lagu *pointer_lagu;
-typedef playlist *pointer_playlist;
+typedef Lagu* PointerLagu;
+typedef Playlist* PointerPlaylist;
 
-void download(string ur, string judul, playlist *currentPlaylist)
+// Global playlist head
+PointerPlaylist globalPlaylist = nullptr;
+
+void download(const string& ur, const string& judul, Playlist* currentPlaylist)
 {
     string url = ur;
     string name = loc + currentPlaylist->nama + "\\" + judul + ext;
-    const char *convu = url.c_str();
-    if (S_OK == URLDownloadToFileA(NULL, url.c_str(), name.c_str(), 0, NULL))
+    const char* convu = url.c_str();
+    if (S_OK == URLDownloadToFileA(nullptr, url.c_str(), name.c_str(), 0, nullptr))
     {
         cout << "Berhasil Ditambahkan ke Playlist " << currentPlaylist->nama << endl;
         // Add the song to the playlist's linked list
-        lagu *pBaru = new lagu;
+        Lagu* pBaru = new Lagu;
         pBaru->judul = judul;
-        pBaru->next = NULL;
-        pBaru->prev = NULL;
+        pBaru->next = nullptr;
+        pBaru->prev = nullptr;
 
-        if (currentPlaylist->laguHead == NULL)
+        if (currentPlaylist->laguHead == nullptr)
         {
             currentPlaylist->laguHead = pBaru;
         }
         else
         {
-            lagu *last = currentPlaylist->laguHead;
-            while (last->next != NULL)
+            Lagu* last = currentPlaylist->laguHead;
+            while (last->next != nullptr)
             {
                 last = last->next;
             }
@@ -70,22 +70,41 @@ void download(string ur, string judul, playlist *currentPlaylist)
     }
 }
 
-void createPlaylist(pointer_playlist &firstPlaylist, string playlistName)
+void createGlobalPlaylist()
 {
-    pointer_playlist newPlaylist = new playlist;
-    newPlaylist->nama = playlistName;
-    newPlaylist->laguHead = NULL;
-    newPlaylist->next = NULL;
-    newPlaylist->prev = NULL;
+    if (globalPlaylist == nullptr)
+    {
+        PointerPlaylist newPlaylist = new Playlist;
+        newPlaylist->nama = "GlobalPlaylist";
+        newPlaylist->laguHead = nullptr;
+        newPlaylist->next = nullptr;
+        newPlaylist->prev = nullptr;
+        globalPlaylist = newPlaylist;
 
-    if (firstPlaylist == NULL)
+        // Create a directory for the global playlist
+        string globalPlaylistDir = loc + newPlaylist->nama;
+        mkdir(globalPlaylistDir.c_str());
+    }
+}
+
+void createPlaylist(PointerPlaylist& firstPlaylist, const string& playlistName)
+{
+    createGlobalPlaylist(); // Ensure that globalPlaylist is created
+
+    PointerPlaylist newPlaylist = new Playlist;
+    newPlaylist->nama = playlistName;
+    newPlaylist->laguHead = nullptr;
+    newPlaylist->next = nullptr;
+    newPlaylist->prev = nullptr;
+
+    if (firstPlaylist == nullptr)
     {
         firstPlaylist = newPlaylist;
     }
     else
     {
-        pointer_playlist last = firstPlaylist;
-        while (last->next != NULL)
+        PointerPlaylist last = firstPlaylist;
+        while (last->next != nullptr)
         {
             last = last->next;
         }
@@ -95,15 +114,24 @@ void createPlaylist(pointer_playlist &firstPlaylist, string playlistName)
 
     // Create a directory for the new playlist
     string playlistDir = loc + playlistName;
-    _mkdir(playlistDir.c_str());
+    mkdir(playlistDir.c_str());
+
+    // Add the new playlist to the global playlist
+    PointerPlaylist lastGlobal = globalPlaylist;
+    while (lastGlobal->next != nullptr)
+    {
+        lastGlobal = lastGlobal->next;
+    }
+    lastGlobal->next = newPlaylist;
+    newPlaylist->prev = lastGlobal;
 }
 
-void displayPlaylists(pointer_playlist firstPlaylist)
+void displayPlaylists(PointerPlaylist firstPlaylist)
 {
     cout << "Daftar Playlist:" << endl;
-    pointer_playlist current = firstPlaylist;
+    PointerPlaylist current = globalPlaylist;
     int i = 1;
-    while (current != NULL)
+    while (current != nullptr)
     {
         cout << i << ". " << current->nama << endl;
         current = current->next;
@@ -111,10 +139,10 @@ void displayPlaylists(pointer_playlist firstPlaylist)
     }
 }
 
-void displaySongsFromFolder(string folderPath)
+void displaySongsFromFolder(const string& folderPath)
 {
-    DIR *dir;
-    struct dirent *entry;
+    DIR* dir;
+    struct dirent* entry;
     struct stat sb;
 
     dir = opendir(folderPath.c_str());
@@ -141,7 +169,7 @@ void displaySongsFromFolder(string folderPath)
     closedir(dir);
 }
 
-void addSongToPlaylist(pointer_playlist currentPlaylist)
+void addSongToPlaylist(PointerPlaylist currentPlaylist)
 {
     cin.ignore();
     string folderPath;
@@ -155,8 +183,8 @@ void addSongToPlaylist(pointer_playlist currentPlaylist)
     cout << "Pilihan: ";
     cin >> selectedSong;
 
-    DIR *dir;
-    struct dirent *entry;
+    DIR* dir;
+    struct dirent* entry;
 
     dir = opendir(folderPath.c_str());
     if (dir == nullptr)
@@ -189,8 +217,8 @@ void addSongToPlaylist(pointer_playlist currentPlaylist)
 
 int main()
 {
-    pointer_playlist firstPlaylist = NULL;
-    pointer_playlist currentPlaylist = NULL;
+    PointerPlaylist firstPlaylist = nullptr;
+    PointerPlaylist currentPlaylist = nullptr;
 
     int pilih;
 
@@ -210,75 +238,140 @@ int main()
         cout << "8. Hapus Antrian lagu" << endl;
         cout << "9. Stop lagu pengguna" << endl;
         cout << "10. Delete Playlist" << endl;
-        cout << "11.Keluar Program" << endl;
+        cout << "11. Keluar Program" << endl;
         cout << "Masukkan Pilihan : ";
         cin >> pilih;
 
         switch (pilih)
         {
-        case 1:
-        {
-            if (currentPlaylist == NULL)
+            case 1:
             {
-                cout << "Anda belum memilih playlist. Pilih playlist terlebih dahulu." << endl;
+                if (currentPlaylist == nullptr)
+                {
+                    cout << "Anda belum memilih playlist. Pilih playlist terlebih dahulu." << endl;
+                    break;
+                }
+
+                cin.ignore();
+                string web, lagu;
+                cout << "Mau Lagu apa?";
+                getline(cin, lagu);
+                cout << lagu << endl;
+
+                cout << "Masukkin URL-nya";
+                getline(cin, web);
+                cout << web << endl;
+                download(web, lagu, currentPlaylist);
+                break;
+            }
+            case 2:
+            {
+                cin.ignore();
+                string playlistName;
+                cout << "Masukkan Nama Playlist Baru: ";
+                getline(cin, playlistName);
+                createPlaylist(firstPlaylist, playlistName);
+                cout << "Playlist " << playlistName << " berhasil dibuat." << endl;
+
+                // Set the newly created playlist as the current playlist
+                currentPlaylist = firstPlaylist; // You may want to set it to the newly created playlist specifically
                 break;
             }
 
-            cin.ignore();
-            string web, lagu;
-            cout << "Mau Lagu apa?";
-            getline(cin, lagu);
-            cout << lagu << endl;
+            case 3:
+                // Existing code for playing a song
+                break;
 
-            cout << "Masukkin URL-nya";
-            getline(cin, web);
-            cout << web << endl;
-            download(web, lagu, currentPlaylist);
-        }
-        break;
-        case 2:
-        {
-            cin.ignore();
-            string playlistName;
-            cout << "Masukkan Nama Playlist Baru: ";
-            getline(cin, playlistName);
+            case 4:
+            {
+                if (firstPlaylist == nullptr)
+                {
+                    cout << "Anda belum membuat playlist. Silakan buat playlist terlebih dahulu." << endl;
+                    break;
+                }
 
-            createPlaylist(firstPlaylist, playlistName);
-            cout << "Playlist " << playlistName << " berhasil dibuat." << endl;
+                    // Display available playlists
+                displayPlaylists(firstPlaylist);
+
+                int selectedPlaylistIndex;
+                cout << "Pilih playlist untuk menambahkan lagu (input nomor playlist): ";
+                cin >> selectedPlaylistIndex;
+
+                // Find the selected playlist
+                PointerPlaylist selectedPlaylist = firstPlaylist;
+                for (int i = 1; i < selectedPlaylistIndex; ++i)
+                {
+                    if (selectedPlaylist == nullptr)
+                    {
+                        cout << "Playlist tidak ditemukan." << endl;
+                        break;
+                    }
+                    selectedPlaylist = selectedPlaylist->next;
+                }
+
+                     // Set the selected playlist as the current playlist
+                currentPlaylist = selectedPlaylist;
+
+    // Check if the current playlist is valid
+                if (currentPlaylist != nullptr)
+                {
+                    addSongToPlaylist(currentPlaylist);
+                }
+                else
+                {
+                    cout << "Error: currentPlaylist is not initialized." << endl;
+                }
+                break;
+            }
+
+            case 5:
+                break;
+
+            case 6:
+            {
+                displayPlaylists(firstPlaylist);
+                break;
+            }
+            case 7:
+                // Placeholder for adding more features
+                break;
+
+            case 8:
+                // Placeholder for adding more features
+                break;
+
+            case 9:
+                // Placeholder for adding more features
+                break;
+
+            case 10:
+                // Placeholder for adding more features
+                break;
+
+            case 11:
+            {
+                cout << "Program berhenti" << endl;
+                cout << "Terima Kasih" << endl;
+                break;
+            }
+            default:
+            {
+                cout << "Maaf pilihan Menu tidak tersedia" << endl;
+                break;
+            }
         }
-        break;
-        case 3:
-            // Existing code for playing a song
-            break;
-        case 4:
-            addSongToPlaylist(currentPlaylist);
-            break;
-        case 5:
-            break;
-        case 6:
-            displayPlaylists(firstPlaylist);
-            break;
-        case 7:
-            // Placeholder for adding more features
-            break;
-        case 8:
-            // Placeholder for adding more features
-            break;
-        case 9:
-            // Placeholder for adding more features
-            break;
-        case 10:
-            // Placeholder for adding more features
-            break;
-        case 11:
-            cout << "Program berhenti" << endl;
-            cout << "Terima Kasih" << endl;
-            break;
-        default:
-            cout << "Maaf pilihan Menu tidak tersedia" << endl;
-            break;
-        }
-        system("PAUSE");
-        system("cls");
-    } while (pilih != 10);
+
+    } while (pilih != 11);
+
+    // Cleanup: Free allocated memory
+    PointerPlaylist temp = firstPlaylist;
+    while (temp != nullptr)
+    {
+        PointerPlaylist next = temp->next;
+        delete temp;
+        temp = next;
+    }
+
+    // You may also need to free the memory allocated for Lagu nodes if needed.
+    return 0;
 }
