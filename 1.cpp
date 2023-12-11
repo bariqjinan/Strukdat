@@ -70,6 +70,61 @@ void displayPlaylists(pointer_playlist firstPlaylist)
         i++;
     }
 }
+
+void bacaPlaylist()
+{
+    const char *folderPath = "Musik\\";
+
+    // Buka direktori
+    DIR *dir = opendir(folderPath);
+
+    // Periksa apakah direktori berhasil dibuka
+    if (dir)
+    {
+        cout << "Daftar Direktori di " << folderPath << ":\n";
+
+        // Baca setiap entri dalam direktori
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != nullptr)
+        {
+            // Abaikan . dan ..
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            {
+                continue;
+            }
+
+            // Bangun path lengkap untuk entri
+            string fullPath = folderPath;
+            fullPath += "/";
+            fullPath += entry->d_name;
+
+            // Dapatkan informasi status file menggunakan stat
+            struct stat fileStat;
+            if (stat(fullPath.c_str(), &fileStat) == 0)
+            {
+                // Cek apakah entri adalah direktori dan dapat diakses (readable)
+                if (S_ISDIR(fileStat.st_mode) && access(fullPath.c_str(), R_OK) == 0)
+                {
+                    // Cetak nama entri
+                    cout << entry->d_name << "\n";
+                }
+            }
+            else
+            {
+                cerr << "Gagal mendapatkan informasi status untuk " << entry->d_name << "\n";
+            }
+        }
+
+        // Tutup direktori setelah selesai membaca
+        closedir(dir);
+    }
+    else
+    {
+        // Tampilkan pesan kesalahan jika gagal membuka direktori
+        std::cerr << "Gagal membuka direktori " << folderPath << "\n";
+        // Keluar dengan kode error
+    }
+}
 void displaySongsFromFolder(string folderPath)
 {
     DIR *dir;
@@ -211,60 +266,6 @@ void laguInit(pointer_lagu &first)
     // pBaru->next = NULL;
 }
 // void playlistInit(pointer)
-void bacaPlaylist()
-{
-    pointer_lagu first = NULL, pBaru;
-    DIR *dir;
-    struct dirent *entry;
-    struct stat sb;
-
-    dir = opendir("Musik\\");
-    if (dir == nullptr)
-    {
-        perror("Failed to open directory");
-    }
-    int i = 0;
-    cout << "Daftar Playlist: " << endl;
-    while ((entry = readdir(dir)) != nullptr)
-    {
-
-        string file_name = entry->d_name;
-        // // Check if the file has a .wav extension
-        // if (file_name.size() >= 4 &&
-        //     file_name.substr(file_name.size() - 4) == ".wav")
-        // {
-        //     pBaru = new lagu;
-        //     pBaru->prev = NULL;
-        //     file_name = file_name.substr(0, file_name.size() - 4);
-        // cout << i + 1 << ". " << file_name << endl;
-
-        // pBaru->judul = file_name;
-        // if (first == NULL)
-        // {
-        //     first = pBaru;
-        //     cout << "cek " << endl;
-        // }
-        // else
-        // {
-        //     insertLast(first, pBaru);
-        //     cout << "cek" << endl;
-        // }
-
-        if (S_ISDIR(sb.st_mode))
-        {
-            cout << "cek" << endl;
-            cout << i << file_name << endl;
-            i++;
-        }
-
-        // cout << "cek " << endl;
-        // pBaru = pBaru->next;
-        i++;
-    }
-    closedir(dir);
-    // cout << "cek" << endl;
-}
-// pBaru->next = NULL;
 
 int main()
 {
