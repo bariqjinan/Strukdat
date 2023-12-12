@@ -200,6 +200,26 @@ void download(string ur, string judul, pointer_lagu &first, pointer_lagu &pBaru)
     }
 }
 
+void selectionSortLagu(pointer_lagu &first)
+{
+    pointer_lagu p = first;
+    while (p != NULL)
+    {
+        pointer_lagu min = p;
+        pointer_lagu q = p->next;
+        while (q != NULL)
+        {
+            if (strcmp(q->judul.c_str(), min->judul.c_str()) < 0)
+            {
+                min = q;
+            }
+            q = q->next;
+        }
+        swap(p->judul, min->judul);
+        p = p->next;
+    }
+}
+
 void traversalLagu(pointer_lagu first)
 {
     int i = 1;
@@ -214,6 +234,9 @@ void traversalLagu(pointer_lagu first)
         cout << "=================="
              << " LAGU "
              << "==================" << endl;
+
+        // Panggil fungsi selectionSortLagu sebelum melakukan traversal
+        selectionSortLagu(first);
 
         while (pBantu != NULL)
         {
@@ -237,6 +260,7 @@ void laguInit(pointer_lagu &first)
         perror("Failed to open directory");
     }
     int i = 0;
+    selectionSortLagu(first);
     while ((entry = readdir(dir)) != nullptr)
     {
 
