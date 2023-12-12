@@ -445,6 +445,11 @@ void playlistInit(pointer_playlist &firstPlaylist)
         // Keluar dengan kode error
     }
 }
+void putarLagu(string Judul)
+{
+
+    PlaySoundA(Judul.c_str(), NULL, SND_FILENAME | SND_ASYNC);
+}
 
 int main()
 {
@@ -459,6 +464,7 @@ int main()
 
     do
     {
+        system("cls");
         cout << "|======================|" << endl;
         cout << "| Program Pemutar Lagu |" << endl;
         cout << "|======================|" << endl;
@@ -523,8 +529,8 @@ int main()
             }
 
             string Judul = loc + pCari->judul + ext;
+            putarLagu(Judul);
 
-            PlaySoundA(Judul.c_str(), NULL, SND_FILENAME | SND_ASYNC);
             break;
         }
         case 4:
@@ -533,6 +539,8 @@ int main()
         {
             traversalLagu(first);
             displayPlaylists(firstPlaylist);
+            system("pause");
+            system("cls");
         }
         break;
         case 6:
@@ -551,7 +559,8 @@ int main()
             cout << "Maaf pilihan Menu tidak tersedia" << endl;
             break;
         }
-        system("PAUSE");
-        system("cls");
+        // system("PAUSE");5
+
+        // system("cls");
     } while (pilih != 10);
 }
