@@ -59,9 +59,62 @@ void createPlaylist(pointer_playlist &firstPlaylist, string playlistName)
     string playlistDir = loc + playlistName;
     mkdir(playlistDir.c_str());
 }
+void sortByAlphabet(pointer_playlist &firstPlaylist)
+{
+    if (firstPlaylist == NULL || firstPlaylist->next == NULL)
+    {
+        // Tidak perlu mengurutkan jika playlist kosong atau hanya berisi satu elemen
+        return;
+    }
+
+    pointer_playlist sorted = NULL;
+    pointer_playlist current = firstPlaylist;
+
+    while (current != NULL)
+    {
+        pointer_playlist next = current->next;
+
+        if (sorted == NULL || sorted->nama.compare(current->nama) > 0)
+        {
+            // Sisipkan di awal jika sorted kosong atau nama current kurang dari sorted
+            current->next = sorted;
+            current->prev = NULL;
+            if (sorted != NULL)
+            {
+                sorted->prev = current;
+            }
+            sorted = current;
+        }
+        else
+        {
+            // Cari tempat yang tepat untuk menyisipkan jika sorted tidak kosong
+            pointer_playlist temp = sorted;
+            while (temp->next != NULL && temp->next->nama.compare(current->nama) < 0)
+            {
+                temp = temp->next;
+            }
+            current->next = temp->next;
+            if (temp->next != NULL)
+            {
+                temp->next->prev = current;
+            }
+            temp->next = current;
+            current->prev = temp;
+        }
+
+        current = next;
+    }
+
+    // Update firstPlaylist menjadi sorted
+    firstPlaylist = sorted;
+}
+
 void displayPlaylists(pointer_playlist firstPlaylist)
 {
-    cout << "Daftar Playlist:" << endl;
+    // Sebelum menampilkan, urutkan playlist berdasarkan urutan abjad
+    sortByAlphabet(firstPlaylist);
+
+    cout << "Daftar Playlist : " << endl;
     pointer_playlist current = firstPlaylist;
     int i = 1;
     while (current != NULL)
@@ -72,60 +125,60 @@ void displayPlaylists(pointer_playlist firstPlaylist)
     }
 }
 
-void bacaPlaylist()
-{
-    const char *folderPath = "Musik\\";
+// void bacaPlaylist()
+// {
+//     const char *folderPath = "Musik\\";
 
-    // Buka direktori
-    DIR *dir = opendir(folderPath);
+//     // Buka direktori
+//     DIR *dir = opendir(folderPath);
 
-    // Periksa apakah direktori berhasil dibuka
-    if (dir)
-    {
-        cout << "Daftar Direktori di " << folderPath << ":\n";
+//     // Periksa apakah direktori berhasil dibuka
+//     if (dir)
+//     {
+//         cout << "Daftar Direktori di " << folderPath << ":\n";
 
-        // Baca setiap entri dalam direktori
-        struct dirent *entry;
-        while ((entry = readdir(dir)) != nullptr)
-        {
-            // Abaikan . dan ..
-            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-            {
-                continue;
-            }
+//         // Baca setiap entri dalam direktori
+//         struct dirent *entry;
+//         while ((entry = readdir(dir)) != nullptr)
+//         {
+//             // Abaikan . dan ..
+//             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+//             {
+//                 continue;
+//             }
 
-            // Bangun path lengkap untuk entri
-            string fullPath = folderPath;
-            fullPath += "/";
-            fullPath += entry->d_name;
+//             // Bangun path lengkap untuk entri
+//             string fullPath = folderPath;
+//             fullPath += "/";
+//             fullPath += entry->d_name;
 
-            // Dapatkan informasi status file menggunakan stat
-            struct stat fileStat;
-            if (stat(fullPath.c_str(), &fileStat) == 0)
-            {
-                // Cek apakah entri adalah direktori dan dapat diakses (readable)
-                if (S_ISDIR(fileStat.st_mode) && access(fullPath.c_str(), R_OK) == 0)
-                {
-                    // Cetak nama entri
-                    cout << entry->d_name << "\n";
-                }
-            }
-            else
-            {
-                cerr << "Gagal mendapatkan informasi status untuk " << entry->d_name << "\n";
-            }
-        }
+//             // Dapatkan informasi status file menggunakan stat
+//             struct stat fileStat;
+//             if (stat(fullPath.c_str(), &fileStat) == 0)
+//             {
+//                 // Cek apakah entri adalah direktori dan dapat diakses (readable)
+//                 if (S_ISDIR(fileStat.st_mode) && access(fullPath.c_str(), R_OK) == 0)
+//                 {
+//                     // Cetak nama entri
+//                     cout << entry->d_name << "\n";
+//                 }
+//             }
+//             else
+//             {
+//                 cerr << "Gagal mendapatkan informasi status untuk " << entry->d_name << "\n";
+//             }
+//         }
 
-        // Tutup direktori setelah selesai membaca
-        closedir(dir);
-    }
-    else
-    {
-        // Tampilkan pesan kesalahan jika gagal membuka direktori
-        std::cerr << "Gagal membuka direktori " << folderPath << "\n";
-        // Keluar dengan kode error
-    }
-}
+//         // Tutup direktori setelah selesai membaca
+//         closedir(dir);
+//     }
+//     else
+//     {
+//         // Tampilkan pesan kesalahan jika gagal membuka direktori
+//         std::cerr << "Gagal membuka direktori " << folderPath << "\n";
+//         // Keluar dengan kode error
+//     }
+// }
 void displaySongsFromFolder(string folderPath)
 {
     DIR *dir;
@@ -259,7 +312,7 @@ void laguInit(pointer_lagu &first)
     {
         perror("Failed to open directory");
     }
-    int i = 0;
+    // int i = 0;
     selectionSortLagu(first);
     while ((entry = readdir(dir)) != nullptr)
     {
@@ -279,16 +332,16 @@ void laguInit(pointer_lagu &first)
             if (first == NULL)
             {
                 first = pBaru;
-                cout << "cek " << endl;
+                // cout << "cek " << endl;
             }
             else
             {
                 insertLastLagu(first, pBaru);
-                cout << "cek" << endl;
+                // cout << "cek" << endl;
             }
             // cout << "cek " << endl;
             pBaru = pBaru->next;
-            i++;
+            // i++;
         }
     }
     closedir(dir);
@@ -313,7 +366,85 @@ void cari(pointer_lagu first, string &judul_lagu, int &found, pointer_lagu &pCar
         }
     }
 }
-// void playlistInit(pointer)
+void playlistInit(pointer_playlist &firstPlaylist)
+{
+    pointer_playlist pBaru;
+    const char *folderPath = "Musik\\";
+
+    // Buka direktori
+    DIR *dir = opendir(folderPath);
+
+    // Periksa apakah direktori berhasil dibuka
+    if (dir)
+    {
+        // cout << "Daftar Direktori di " << folderPath << ":\n";
+
+        // Baca setiap entri dalam direktori
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != nullptr)
+        {
+            // Abaikan . dan ..
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            {
+                continue;
+            }
+
+            // Bangun path lengkap untuk entri
+            string fullPath = folderPath;
+            fullPath += "/";
+            fullPath += entry->d_name;
+
+            // Dapatkan informasi status file menggunakan stat
+            struct stat fileStat;
+            if (stat(fullPath.c_str(), &fileStat) == 0)
+            {
+                // Cek apakah entri adalah direktori dan dapat diakses (readable)
+                if (S_ISDIR(fileStat.st_mode) && access(fullPath.c_str(), R_OK) == 0)
+                {
+                    // Cetak nama entri
+                    pBaru = new playlist;
+                    pBaru->nama = entry->d_name;
+                    pBaru->laguHead = NULL;
+                    pBaru->prev = NULL;
+                    pBaru->next = NULL;
+
+                    if (firstPlaylist == NULL)
+                    {
+                        firstPlaylist = pBaru;
+                        cout << "cek" << endl;
+                    }
+                    else
+                    {
+                        cout << "cek" << endl;
+                        pointer_playlist last = firstPlaylist;
+                        while (last->next != NULL)
+                        {
+                            last = last->next;
+                        }
+                        last->next = pBaru;
+                        pBaru->prev = last;
+                    }
+                    // pBaru = pBaru->next;
+
+                    // cout << entry->d_name << "\n";
+                }
+            }
+            else
+            {
+                cerr << "Gagal mendapatkan informasi status untuk " << entry->d_name << "\n";
+            }
+        }
+
+        // Tutup direktori setelah selesai membaca
+        closedir(dir);
+    }
+    else
+    {
+        // Tampilkan pesan kesalahan jika gagal membuka direktori
+        cerr << "Gagal membuka direktori " << folderPath << "\n";
+        // Keluar dengan kode error
+    }
+}
 
 int main()
 {
@@ -323,7 +454,7 @@ int main()
     pointer_playlist firstPlaylist = NULL;
     pointer_playlist currentPlaylist = NULL;
     laguInit(first);
-
+    playlistInit(firstPlaylist);
     int pilih;
 
     do
@@ -336,7 +467,7 @@ int main()
         cout << "2. Tambah playlist" << endl;
         cout << "3. Putar lagu apa?" << endl;
         cout << "4. Masukan Antrian" << endl;
-        cout << "5. Tampilkan lagu" << endl;
+        cout << "5. Tampilkan lagu dan playlist" << endl;
         cout << "6. Hapus lagu pengguna" << endl;
         cout << "7. Hapus Antrian lagu" << endl;
         cout << "8. Stop lagu pengguna" << endl;
@@ -375,8 +506,9 @@ int main()
         }
         case 3:
         {
+            traversalLagu(first);
             cin.ignore();
-            cout << "Masukkan Judul Lagu: " << endl;
+            cout << "Masukkan Judul Lagu: ";
             getline(cin, judul_lagu);
             cari(first, judul_lagu, found, pCari);
 
@@ -400,7 +532,7 @@ int main()
         case 5:
         {
             traversalLagu(first);
-            bacaPlaylist();
+            displayPlaylists(firstPlaylist);
         }
         break;
         case 6:
