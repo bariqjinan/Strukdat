@@ -1,7 +1,7 @@
 #include <iostream>
-#include <iomanip>
-#include <winsock2.h>
-#include <windows.h>
+// #include <iomanip>
+// #include <winsock2.h>
+// #include <windows.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -10,8 +10,8 @@
 #include <curl/curl.h>
 #include <string>
 #include "MMSystem.h"
-#include <winnt.h>
-#include <pthread.h>
+// #include <winnt.h>
+// #include <pthread.h>
 
 using namespace std;
 
@@ -30,6 +30,7 @@ struct playlist
     playlist *next;
     playlist *prev;
 };
+typedef lagu *pointer_lagu;
 typedef playlist *pointer_playlist;
 void createPlaylist(pointer_playlist &firstPlaylist, string playlistName)
 {
@@ -70,6 +71,61 @@ void displayPlaylists(pointer_playlist firstPlaylist)
         i++;
     }
 }
+
+void bacaPlaylist()
+{
+    const char *folderPath = "Musik\\";
+
+    // Buka direktori
+    DIR *dir = opendir(folderPath);
+
+    // Periksa apakah direktori berhasil dibuka
+    if (dir)
+    {
+        cout << "Daftar Direktori di " << folderPath << ":\n";
+
+        // Baca setiap entri dalam direktori
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != nullptr)
+        {
+            // Abaikan . dan ..
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            {
+                continue;
+            }
+
+            // Bangun path lengkap untuk entri
+            string fullPath = folderPath;
+            fullPath += "/";
+            fullPath += entry->d_name;
+
+            // Dapatkan informasi status file menggunakan stat
+            struct stat fileStat;
+            if (stat(fullPath.c_str(), &fileStat) == 0)
+            {
+                // Cek apakah entri adalah direktori dan dapat diakses (readable)
+                if (S_ISDIR(fileStat.st_mode) && access(fullPath.c_str(), R_OK) == 0)
+                {
+                    // Cetak nama entri
+                    cout << entry->d_name << "\n";
+                }
+            }
+            else
+            {
+                cerr << "Gagal mendapatkan informasi status untuk " << entry->d_name << "\n";
+            }
+        }
+
+        // Tutup direktori setelah selesai membaca
+        closedir(dir);
+    }
+    else
+    {
+        // Tampilkan pesan kesalahan jika gagal membuka direktori
+        std::cerr << "Gagal membuka direktori " << folderPath << "\n";
+        // Keluar dengan kode error
+    }
+}
 void displaySongsFromFolder(string folderPath)
 {
     DIR *dir;
@@ -99,23 +155,6 @@ void displaySongsFromFolder(string folderPath)
 
     closedir(dir);
 }
-
-void download(string ur, string judul)
-{
-    string url = ur;
-    string name = loc + judul + ext;
-    const char *convu = url.c_str();
-    if (S_OK == URLDownloadToFileA(NULL, url.c_str(), name.c_str(), 0, NULL))
-    {
-        cout << "Berhasil Ditambahkan" << endl;
-    }
-    else
-    {
-        cout << "Gagal" << endl;
-    }
-}
-
-typedef lagu *pointer_lagu;
 void insertLastLagu(pointer_lagu &first, pointer_lagu &pBaru)
 {
     pointer_lagu last;
@@ -136,6 +175,31 @@ void insertLastLagu(pointer_lagu &first, pointer_lagu &pBaru)
     pBaru->next = NULL;
 }
 
+void download(string ur, string judul, pointer_lagu &first, pointer_lagu &pBaru)
+{
+    string url = ur;
+    string name = loc + judul + ext;
+    const char *convu = url.c_str();
+    if (S_OK == URLDownloadToFileA(NULL, url.c_str(), name.c_str(), 0, NULL))
+    {
+        pBaru->next = NULL;
+        pBaru->prev = NULL;
+        cout << "Berhasil Ditambahkan" << endl;
+        if (first == NULL)
+        {
+            first = pBaru;
+        }
+        else
+        {
+            insertLastLagu(first, pBaru);
+        }
+    }
+    else
+    {
+        cout << "Gagal" << endl;
+    }
+}
+
 void traversalLagu(pointer_lagu first)
 {
     int i = 1;
@@ -150,9 +214,6 @@ void traversalLagu(pointer_lagu first)
         cout << "=================="
              << " LAGU "
              << "==================" << endl;
-        cout << setfill('=') << setw(70) << "" << setfill(' ') << endl;
-        cout << left << setw(20) << "JUDUL LAGU" << setw(30) << endl;
-        cout << setfill('=') << setw(70) << "" << setfill(' ') << endl;
 
         while (pBantu != NULL)
         {
@@ -210,65 +271,30 @@ void laguInit(pointer_lagu &first)
     // cout << "cek" << endl;
     // pBaru->next = NULL;
 }
-// void playlistInit(pointer)
-void bacaPlaylist()
+
+void cari(pointer_lagu first, string &judul_lagu, int &found, pointer_lagu &pCari)
 {
-    pointer_lagu first = NULL, pBaru;
-    DIR *dir;
-    struct dirent *entry;
-    struct stat sb;
+    found = 0;
+    pCari = first;
 
-    dir = opendir("Musik\\");
-    if (dir == nullptr)
+    while (found == 0 && pCari != NULL)
     {
-        perror("Failed to open directory");
-    }
-    int i = 0;
-    cout << "Daftar Playlist: " << endl;
-    while ((entry = readdir(dir)) != nullptr)
-    {
-
-        string file_name = entry->d_name;
-        // // Check if the file has a .wav extension
-        // if (file_name.size() >= 4 &&
-        //     file_name.substr(file_name.size() - 4) == ".wav")
-        // {
-        //     pBaru = new lagu;
-        //     pBaru->prev = NULL;
-        //     file_name = file_name.substr(0, file_name.size() - 4);
-        // cout << i + 1 << ". " << file_name << endl;
-
-        // pBaru->judul = file_name;
-        // if (first == NULL)
-        // {
-        //     first = pBaru;
-        //     cout << "cek " << endl;
-        // }
-        // else
-        // {
-        //     insertLast(first, pBaru);
-        //     cout << "cek" << endl;
-        // }
-
-        if (S_ISDIR(sb.st_mode))
+        if (pCari->judul == judul_lagu)
         {
-            cout << "cek" << endl;
-            cout << i << file_name << endl;
-            i++;
+            found = 1;
         }
-
-        // cout << "cek " << endl;
-        // pBaru = pBaru->next;
-        i++;
+        else
+        {
+            pCari = pCari->next;
+        }
     }
-    closedir(dir);
-    // cout << "cek" << endl;
 }
-// pBaru->next = NULL;
+// void playlistInit(pointer)
 
 int main()
 {
-
+    string judul_lagu;
+    int found;
     pointer_lagu first = NULL, pBaru, pCari, pHapus;
     pointer_playlist firstPlaylist = NULL;
     pointer_playlist currentPlaylist = NULL;
@@ -298,15 +324,17 @@ int main()
         {
         case 1:
         {
+            pBaru = new lagu;
             cin.ignore();
             string web, lagu;
             cout << "Mau Lagu apa? ";
-            getline(cin, lagu);
-            cout << lagu << endl;
+            getline(cin, pBaru->judul);
+            cout << pBaru->judul << endl;
+
             cout << "Masukkin URL-nya: ";
             getline(cin, web);
             cout << web << endl;
-            download(web, lagu);
+            download(web, pBaru->judul, first, pBaru);
         }
         break;
         case 2:
@@ -325,10 +353,21 @@ int main()
         {
             cin.ignore();
             cout << "Masukkan Judul Lagu: " << endl;
-            getline(cin, first->judul);
+            getline(cin, judul_lagu);
+            cari(first, judul_lagu, found, pCari);
 
-            string Judul = loc + first->judul + ext;
-            cout << Judul << endl;
+            if (found)
+            {
+                cout << "Lagu " << judul_lagu << " ditemukan." << endl;
+                cout << "Memutar lagu " << judul_lagu << endl;
+            }
+            else
+            {
+                cout << "Lagu " << judul_lagu << " tidak ditemukan." << endl;
+            }
+
+            string Judul = loc + pCari->judul + ext;
+
             PlaySoundA(Judul.c_str(), NULL, SND_FILENAME | SND_ASYNC);
             break;
         }
