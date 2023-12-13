@@ -1,66 +1,29 @@
 #include <iostream>
-#include <winsock2.h>
-#include <windows.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <dirent.h>
 #include <fstream>
-#include <curl/curl.h>
 #include <string>
-#include "MMSystem.h"
-#include <winnt.h>
-#include <pthread.h>
+#include <windows.h>
 
 using namespace std;
 
-struct Lagu {
+struct lagu {
     string judul;
-    Lagu* next;
-    Lagu* prev;
+    lagu* next;
+    lagu* prev;
 };
 
-typedef Lagu* plg;
+typedef lagu *pointer_lagu;
 
-void CreateElmt(plg& first, const string& judul) {
-    Lagu* pBaru = new Lagu;
-    pBaru->judul = judul;
-    pBaru->next = NULL;
-    pBaru->prev = NULL;
-
-    if (first == NULL) {
-        first = pBaru;
-    } else {
-        Lagu* last = first;
-        while (last->next != NULL) {
-            last = last->next;
-        }
-        last->next = pBaru;
-        pBaru->prev = last;
-    }
-
-    // Simpan lagu ke file
-    ofstream file(pBaru->judul + ".wav");
-    if (file.is_open()) {
-        file << "Judul Lagu: " << pBaru->judul << "\n";
-        file.close();
-        cout << "File " << pBaru->judul << ".wav berhasil dibuat." << endl;
-    } else {
-        cerr << "Unable to open file: " << pBaru->judul + ".wav" << "\n";
-    }
-}
-
-void DisplayList(const plg& first) {
+void DisplayList(const pointer_lagu& first) {
     cout << "Daftar lagu:\n";
-    const Lagu* current = first;
+    const lagu* current = first;
     while (current != NULL) {
         cout << current->judul << "\n";
         current = current->next;
     }
 }
 
-void DeletepCari(plg& first, const string& judul) {
-    Lagu* pCari = first;
+void DeletepCari(pointer_lagu& first, const string& judul, const string& folderPath) {
+    lagu* pCari = first;
 
     while (pCari != NULL && pCari->judul != judul) {
         pCari = pCari->next;
@@ -71,8 +34,11 @@ void DeletepCari(plg& first, const string& judul) {
         return;
     }
 
-    string fileName = pCari->judul + ".wav";
-    remove(fileName.c_str());
+    string fileName = folderPath + "\\" + pCari->judul + ".wav";
+    if (remove(fileName.c_str()) != 0) {
+        cerr << "Error deleting file. Check if the file exists and has the correct permissions." << endl;
+        return;
+    }
 
     if (pCari->prev == NULL) {
         first = pCari->next;
@@ -93,67 +59,60 @@ void DeletepCari(plg& first, const string& judul) {
     cout << "File dan lagu berhasil dihapus.\n";
 }
 
-void ReadListFromFile(plg& first, const string& filename) {
-    ifstream file(filename);
+void ReadListFromFile(pointer_lagu& first, const string& folderPath) {
+    WIN32_FIND_DATA findFileData;
+    HANDLE hFind = FindFirstFile((folderPath + "\\*.wav").c_str(), &findFileData);
 
-    if (file.is_open()) {
-        string judul;
-        while (getline(file, judul)) {
-            CreateElmt(first, judul);
-        }
-        file.close();
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            if (!(findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+                string judul = findFileData.cFileName;
+                judul.erase(judul.size() - 4);  // Remove the ".wav" extension
+                lagu* pBaru = new lagu{judul, NULL, NULL};
+
+                if (first == NULL) {
+                    first = pBaru;
+                } else {
+                    lagu* last = first;
+                    while (last->next != NULL) {
+                        last = last->next;
+                    }
+                    last->next = pBaru;
+                    pBaru->prev = last;
+                }
+            }
+        } while (FindNextFile(hFind, &findFileData) != 0);
+
+        FindClose(hFind);
     } else {
-        cerr << "Unable to open file: " << filename << "\n";
-    }
-}
-
-void SaveListToFile(const plg& first, const string& filename) {
-    ofstream file(filename);
-
-    if (file.is_open()) {
-        const Lagu* current = first;
-        while (current != NULL) {
-            file << current->judul << "\n";
-            current = current->next;
-        }
-        file.close();
-    } else {
-        cerr << "Unable to open file: " << filename << "\n";
+        cerr << "Unable to open directory: " << folderPath << "\n";
     }
 }
 
 int main() {
-    plg first = NULL;
+    pointer_lagu first = NULL;
+
+    // Set your storage path
+    string folderPath = "D:\\DATA AISHA\\UNPAD\\SEMESTER 3(B)\\libCurl\\Musik";
 
     // Membaca daftar lagu dari file
-    ReadListFromFile(first, "daftar_lagu.txt");
+    ReadListFromFile(first, folderPath);
 
     cout << "Daftar lagu sebelum penghapusan:\n";
     DisplayList(first);
 
-    cout << "Masukkan judul lagu (kosongkan untuk selesai): ";
+    cout << "Masukkan judul lagu yang akan dihapus: ";
     string judul;
     getline(cin, judul);
 
-    while (!judul.empty()) {
-        CreateElmt(first, judul);
-        SaveListToFile(first, "daftar_lagu.txt");  // Menyimpan daftar lagu ke file setiap kali ditambahkan
-        cout << "Masukkan judul lagu (kosongkan untuk selesai): ";
-        getline(cin, judul);
-    }
-
-    cout << "Masukkan judul lagu yang akan dihapus: ";
-    getline(cin, judul);
-
-    DeletepCari(first, judul);
-    SaveListToFile(first, "daftar_lagu.txt");  // Menyimpan daftar lagu ke file setelah penghapusan
+    DeletepCari(first, judul, folderPath);
 
     cout << "Daftar lagu setelah penghapusan:\n";
     DisplayList(first);
 
     // Membersihkan memori
     while (first != NULL) {
-        Lagu* temp = first;
+        lagu* temp = first;
         first = first->next;
         delete temp;
     }
