@@ -33,6 +33,7 @@ struct playlist
 };
 typedef lagu *pointer_lagu;
 typedef playlist *pointer_playlist;
+
 void createPlaylist(pointer_playlist &firstPlaylist, string playlistName)
 {
     pointer_playlist newPlaylist = new playlist;
@@ -211,14 +212,32 @@ void displaySongsFromFolder(string folderPath)
 }
 void insertLastLagu(pointer_lagu &first, pointer_lagu &pBaru)
 {
-    pointer_lagu last;
     if (first == NULL)
     {
         first = pBaru;
     }
     else
     {
-        last = first;
+        pointer_lagu last = first;
+        while (last->next != NULL)
+        {
+            last = last->next;
+        }
+        last->next = pBaru;
+        pBaru->prev = last;
+    }
+    pBaru->next = NULL;
+}
+
+void insertLastPlaylist(pointer_playlist &firstPlaylist, pointer_playlist &pBaru)
+{
+    if (firstPlaylist == NULL)
+    {
+        firstPlaylist = pBaru;
+    }
+    else
+    {
+        pointer_playlist last = firstPlaylist;
         while (last->next != NULL)
         {
             last = last->next;
@@ -313,42 +332,33 @@ void laguInit(pointer_lagu &first)
     {
         perror("Failed to open directory");
     }
-    // int i = 0;
-    selectionSortLagu(first);
+
     while ((entry = readdir(dir)) != nullptr)
     {
-
         string file_name = entry->d_name;
 
         // Check if the file has a .wav extension
-        if (file_name.size() >= 4 &&
-            file_name.substr(file_name.size() - 4) == ".wav")
+        if (file_name.size() >= 4 && file_name.substr(file_name.size() - 4) == ".wav")
         {
             pBaru = new lagu;
             pBaru->prev = NULL;
             file_name = file_name.substr(0, file_name.size() - 4);
-            // cout << i + 1 << ". " << file_name << endl;
 
             pBaru->judul = file_name;
             if (first == NULL)
             {
                 first = pBaru;
-                // cout << "cek " << endl;
             }
             else
             {
                 insertLastLagu(first, pBaru);
-                // cout << "cek" << endl;
             }
-            // cout << "cek " << endl;
-            pBaru = pBaru->next;
-            // i++;
         }
     }
+
     closedir(dir);
-    // cout << "cek" << endl;
-    // pBaru->next = NULL;
 }
+
 
 void cari(pointer_lagu first, string &judul_lagu, int &found, pointer_lagu &pCari)
 {
@@ -377,85 +387,93 @@ void cariplaylist(pointer_playlist firstPlaylist, string &playlistName, pointer_
     }
 }
 
-void playlistInit(pointer_playlist &firstPlaylist)
+void playlistInit(pointer_playlist &firstPlaylist, pointer_lagu &first)
 {
-    pointer_playlist pBaru;
     const char *folderPath = "Musik\\";
 
-    // Buka direktori
     DIR *dir = opendir(folderPath);
-
-    // Periksa apakah direktori berhasil dibuka
     if (dir)
     {
-        // cout << "Daftar Direktori di " << folderPath << ":\n";
-
-        // Baca setiap entri dalam direktori
         struct dirent *entry;
         while ((entry = readdir(dir)) != nullptr)
         {
-            // Abaikan . dan ..
             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
             {
                 continue;
             }
 
-            // Bangun path lengkap untuk entri
-            string fullPath = folderPath;
-            fullPath += "/";
-            fullPath += entry->d_name;
+            string playlistName = entry->d_name;
+            string playlistFolderPath = folderPath + playlistName + "\\";
 
-            // Dapatkan informasi status file menggunakan stat
             struct stat fileStat;
-            if (stat(fullPath.c_str(), &fileStat) == 0)
+            if (stat(playlistFolderPath.c_str(), &fileStat) == 0 && S_ISDIR(fileStat.st_mode))
             {
-                // Cek apakah entri adalah direktori dan dapat diakses (readable)
-                if (S_ISDIR(fileStat.st_mode) && access(fullPath.c_str(), R_OK) == 0)
+                pointer_playlist pBaru = new playlist;
+                pBaru->nama = playlistName;
+                pBaru->laguHead = NULL;
+                pBaru->prev = NULL;
+                pBaru->next = NULL;
+
+                if (firstPlaylist == NULL)
                 {
-                    // Cetak nama entri
-                    pBaru = new playlist;
-                    pBaru->nama = entry->d_name;
-                    pBaru->laguHead = NULL;
-                    pBaru->prev = NULL;
-                    pBaru->next = NULL;
-
-                    if (firstPlaylist == NULL)
+                    firstPlaylist = pBaru;
+                }
+                else
+                {
+                    pointer_playlist last = firstPlaylist;
+                    while (last->next != NULL)
                     {
-                        firstPlaylist = pBaru;
-                        cout << "cek" << endl;
+                        last = last->next;
                     }
-                    else
+                    last->next = pBaru;
+                    pBaru->prev = last;
+                }
+
+                // Tambahkan lagu ke dalam playlist
+                DIR *playlistDir = opendir(playlistFolderPath.c_str());
+                if (playlistDir)
+                {
+                    struct dirent *playlistEntry;
+                    while ((playlistEntry = readdir(playlistDir)) != nullptr)
                     {
-                        cout << "cek" << endl;
-                        pointer_playlist last = firstPlaylist;
-                        while (last->next != NULL)
+                        string file_name = playlistEntry->d_name;
+
+                        if (file_name.size() >= 4 && file_name.substr(file_name.size() - 4) == ".wav")
                         {
-                            last = last->next;
-                        }
-                        last->next = pBaru;
-                        pBaru->prev = last;
-                    }
-                    // pBaru = pBaru->next;
+                            pointer_lagu laguBaru = new lagu;
+                            laguBaru->prev = NULL;
+                            file_name = file_name.substr(0, file_name.size() - 4);
 
-                    // cout << entry->d_name << "\n";
+                            laguBaru->judul = file_name;
+                            if (pBaru->laguHead == NULL)
+                            {
+                                pBaru->laguHead = laguBaru;
+                            }
+                            else
+                            {
+                                pointer_lagu last = pBaru->laguHead;
+                                while (last->next != NULL)
+                                {
+                                    last = last->next;
+                                }
+                                last->next = laguBaru;
+                                laguBaru->prev = last;
+                            }
+                        }
+                    }
+                    closedir(playlistDir);
                 }
             }
-            else
-            {
-                cerr << "Gagal mendapatkan informasi status untuk " << entry->d_name << "\n";
-            }
         }
-
-        // Tutup direktori setelah selesai membaca
         closedir(dir);
     }
     else
     {
-        // Tampilkan pesan kesalahan jika gagal membuka direktori
         cerr << "Gagal membuka direktori " << folderPath << "\n";
-        // Keluar dengan kode error
     }
 }
+
+
 void putarLagu(string Judul)
 {
 
@@ -477,6 +495,8 @@ void tambahLaguKePlaylist(pointer_lagu &first, pointer_playlist &currentPlaylist
         laguBaru->judul = pCari->judul;
         laguBaru->next = NULL;
         laguBaru->prev = NULL;
+
+        //insertLastLagu(currentPlaylist->laguHead, laguBaru);
 
         if (currentPlaylist->laguHead == NULL)
         {
@@ -515,7 +535,6 @@ void tambahLaguKePlaylist(pointer_lagu &first, pointer_playlist &currentPlaylist
             cerr << "Error: Gagal menulis file tujuan setelah penyalinan." << endl;
             return;
         }
-
         cout << "Lagu " << judul_lagu << " berhasil ditambahkan ke dalam playlist " << currentPlaylist->nama << "." << endl;
 
         cout << "Daftar Lagu dalam Playlist " << currentPlaylist->nama << ":" << endl;
@@ -533,6 +552,38 @@ void tambahLaguKePlaylist(pointer_lagu &first, pointer_playlist &currentPlaylist
         cout << "Lagu " << judul_lagu << " tidak ditemukan." << endl;
     }
 }
+void displayPlaylistsAndSongs(pointer_playlist firstPlaylist)
+{
+    pointer_playlist currentPlaylist = firstPlaylist;
+
+    while (currentPlaylist != NULL)
+    {
+        cout << "Daftar Putar: " << currentPlaylist->nama << endl;
+
+        pointer_lagu currentSong = currentPlaylist->laguHead;
+        int songIndex = 1;
+
+        while (currentSong != NULL)
+        {
+            cout << setw(5) << " " << songIndex << ". " << currentSong->judul << endl;
+            currentSong = currentSong->next;
+            songIndex++;
+        }
+
+        cout << endl;
+        currentPlaylist = currentPlaylist->next;
+    }
+}
+
+void playMusicThread(string filePath)
+{
+    PlaySoundA(filePath.c_str(), NULL, SND_FILENAME);
+
+    while (PlaySoundA(NULL, NULL, SND_ASYNC) == 0)
+    {
+        // Menunggu pemutaran selesai
+    }
+}
 
 //ini keknya terlalu panjang
 void playPlaylist(pointer_playlist foundPlaylist)
@@ -544,9 +595,11 @@ void playPlaylist(pointer_playlist foundPlaylist)
         lagu *laguInPlaylist = foundPlaylist->laguHead;
         int laguIndex = 1;
 
+        cout << "Daftar Lagu dalam Playlist " << foundPlaylist->nama << ":" << endl;
+
         while (laguInPlaylist != NULL)
         {
-            cout << laguIndex << ". Lagu dalam playlist: " << laguInPlaylist->judul << endl;
+            cout << laguIndex << ". " << laguInPlaylist->judul << endl;
             laguInPlaylist = laguInPlaylist->next;
             laguIndex++;
         }
@@ -562,14 +615,7 @@ void playPlaylist(pointer_playlist foundPlaylist)
 
                 cout << "Memutar lagu dari playlist: " << judulLagu << endl;
 
-                if (PlaySoundA(filePath.c_str(), NULL, SND_FILENAME) == 0)
-                {
-                    cerr << "Error memutar suara. Kode kesalahan: " << GetLastError() << endl;
-                }
-
-                while (PlaySoundA(NULL, NULL, SND_ASYNC) == 0)
-                {
-                }
+                std::thread(playMusicThread, filePath).detach();
 
                 laguDiputar = laguDiputar->next;
             }
@@ -589,7 +635,7 @@ int main()
     pointer_playlist firstPlaylist = NULL;
     pointer_playlist currentPlaylist = NULL;
     laguInit(first);
-    playlistInit(firstPlaylist);
+    playlistInit(firstPlaylist, first);
     int pilih;
 
     pointer_playlist playlistDiputar = NULL;
@@ -645,6 +691,7 @@ int main()
         case 3:
         {
             traversalLagu(first);
+            displayPlaylistsAndSongs(firstPlaylist);
             cin.ignore();
             string inputJudul;
             cout << "Masukkan Judul Lagu atau Nama Playlist: ";
@@ -687,7 +734,6 @@ int main()
             cout << "Masukkan Nama Playlist: ";
             getline(cin, playlistName);
 
-            // Cari playlist yang diinginkan
             pointer_playlist pPlaylist = firstPlaylist;
             while (pPlaylist != NULL && pPlaylist->nama != playlistName)
             {
@@ -699,10 +745,11 @@ int main()
                 currentPlaylist = pPlaylist;
                 cout << "Playlist " << playlistName << " dipilih." << endl;
 
-                // Tambahkan lagu ke dalam playlist
                 cout << "Masukkan Judul Lagu yang ingin ditambahkan: ";
                 getline(cin, judul_lagu);
                 tambahLaguKePlaylist(first, currentPlaylist, judul_lagu);
+
+                cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             }
             else
             {
@@ -715,43 +762,10 @@ int main()
         case 6:
         {
             traversalLagu(first);
-            displayPlaylists(firstPlaylist);
+            displayPlaylistsAndSongs(firstPlaylist);
             system("pause");
             system("cls");
         }
-        /*{
-            traversalLagu(first);
-            displayPlaylists(firstPlaylist);
-            cout << "Masukkan Nama Playlist: ";
-            cin.ignore();
-            getline(cin, judul_lagu);
-
-            pointer_playlist pPlaylist = firstPlaylist;
-            while (pPlaylist != NULL && pPlaylist->nama != judul_lagu)
-            {
-                pPlaylist = pPlaylist->next;
-            }
-
-            if (pPlaylist != NULL)
-            {
-                cout << "Daftar Lagu dalam Playlist " << judul_lagu << ":" << endl;
-                pointer_lagu pLagu = pPlaylist->laguHead;
-                int i = 1;
-                while (pLagu != NULL)
-                {
-                    cout << i << ". " << pLagu->judul << endl;
-                    pLagu = pLagu->next;
-                    i++;
-                }
-            }
-            else
-            {
-                cout << "Playlist " << judul_lagu << " tidak ditemukan." << endl;
-            }
-
-            system("pause");
-            system("cls");
-        }*/
             break;
         case 7:
             break;
