@@ -7,6 +7,8 @@
 #include <curl/curl.h>
 #include <string>
 #include "MMSystem.h"
+#include <cstdio>
+#include <filesystem>
 
 using namespace std;
 
@@ -777,15 +779,66 @@ void hapusLaguDariPlaylist(pointer_lagu &first, pointer_playlist &currentPlaylis
     }
 }
 
-void deletePlaylistFolder(const string &playlistName)
+bool deleteFolder(const string &folderPath)
 {
-    // Construct the path to the playlist folder
+    try
+    {
+        // Menghapus seluruh isi folder secara rekursif
+        filesystem::remove_all(folderPath);
+
+        // Menghapus folder itu sendiri
+        filesystem::remove(folderPath);
+
+        cout << "Folder berhasil dihapus: " << folderPath << endl;
+        return true;
+    }
+    catch (const exception &e)
+    {
+        cerr << "Gagal menghapus folder: " << e.what() << endl;
+        return false;
+    }
+}
+
+void deletePlaylistFolder(const string &playlistName, pointer_playlist &firstPlaylist)
+{
+    // Konversi string biasa ke wide string
     string playlistFolderPath = "Musik\\" + playlistName;
 
-    // Attempt to remove the playlist folder
-    if (RemoveDirectoryA(playlistFolderPath.c_str()) != 0)
+    // Attempt to remove the playlist folder and its contents
+    if (deleteFolder(playlistFolderPath.c_str()))
     {
-        cout << "Playlist folder " << playlistName << " successfully deleted." << endl;
+        // Remove the playlist entry from the multilist
+        pointer_playlist currentPlaylist = firstPlaylist;
+        while (currentPlaylist != nullptr)
+        {
+            if (currentPlaylist->nama == playlistName)
+            {
+                // Adjust pointers for the playlist entry
+                if (currentPlaylist->prev != nullptr)
+                {
+                    currentPlaylist->prev->next = currentPlaylist->next;
+                }
+                else
+                {
+                    firstPlaylist = currentPlaylist->next;
+                }
+
+                if (currentPlaylist->next != nullptr)
+                {
+                    currentPlaylist->next->prev = currentPlaylist->prev;
+                }
+
+                // Free memory for the playlist entry
+                delete currentPlaylist;
+
+                cout << "Playlist folder " << playlistName << " successfully deleted." << endl;
+                return;
+            }
+
+            currentPlaylist = currentPlaylist->next;
+        }
+
+        cerr << "Error: Playlist entry not found in multilist." << endl;
     }
     else
     {
@@ -1001,6 +1054,10 @@ int main()
             break;
         }
         case 9:
+            cout << Q.head->music << " dihapus dari antrean" << endl;
+            deleteQueue(Q, qHapus);
+            system("pause");
+            system("cls");
             break;
         case 10:
             stopLagu();
@@ -1023,25 +1080,25 @@ int main()
             if (pPlaylist != NULL)
             {
                 // Hapus folder playlist
-                deletePlaylistFolder(playlistName);
+                deletePlaylistFolder(playlistName, firstPlaylist);
 
-                // Hapus playlist dari linked list
-                if (pPlaylist->prev != NULL)
-                {
-                    pPlaylist->prev->next = pPlaylist->next;
-                }
-                else
-                {
-                    firstPlaylist = pPlaylist->next;
-                }
+                // // Hapus playlist dari linked list
+                // if (pPlaylist->prev != NULL)
+                // {
+                //     pPlaylist->prev->next = pPlaylist->next;
+                // }
+                // else
+                // {
+                //     firstPlaylist = pPlaylist->next;
+                // }
 
-                if (pPlaylist->next != NULL)
-                {
-                    pPlaylist->next->prev = pPlaylist->prev;
-                }
+                // if (pPlaylist->next != NULL)
+                // {
+                //     pPlaylist->next->prev = pPlaylist->prev;
+                // }
 
-                // Hapus playlist dari memori
-                delete pPlaylist;
+                // // Hapus playlist dari memori
+                // delete pPlaylist;
 
                 cout << "Playlist " << playlistName << " berhasil dihapus." << endl;
             }
