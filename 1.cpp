@@ -697,9 +697,7 @@ void playPlaylist(pointer_playlist foundPlaylist)
                     cerr << "Error memutar suara. Kode kesalahan: " << GetLastError() << endl;
                 }
 
-                while (PlaySoundA(NULL, NULL, SND_ASYNC) == 0)
-                {
-                }
+                //
 
                 laguDiputar = laguDiputar->next;
             }
@@ -711,6 +709,68 @@ void playPlaylist(pointer_playlist foundPlaylist)
     }
 }
 
+bool isInPlaylist(pointer_playlist firstPlaylist, string judul_lagu)
+{
+    pointer_playlist pPlaylist = firstPlaylist;
+
+    while (pPlaylist != NULL)
+    {
+        pointer_lagu pCari = pPlaylist->laguHead;
+
+        // Cari lagu dalam playlist
+        while (pCari != NULL)
+        {
+            if (strcmp(pCari->judul.c_str(), judul_lagu.c_str()) == 0)
+            {
+                cout << "Lagu ada pada playlist " << pPlaylist->nama << endl;
+                return true; // Lagu ditemukan dalam playlist
+            }
+            pCari = pCari->next;
+        }
+
+        pPlaylist = pPlaylist->next;
+    }
+
+    return false; // Lagu tidak ditemukan dalam playlist
+}
+
+void hapusDariPlaylist(pointer_playlist &firstPlaylist, string judul_lagu)
+{
+    pointer_playlist pPlaylist = firstPlaylist;
+
+    while (pPlaylist != NULL)
+    {
+        pointer_lagu pCari = pPlaylist->laguHead;
+        pointer_lagu pPrev = NULL;
+
+        // Cari lagu dalam playlist
+        while (pCari != NULL && pCari->judul != judul_lagu)
+        {
+            pPrev = pCari;
+            pCari = pCari->next;
+        }
+
+        if (pCari != NULL)
+        {
+            // Hapus lagu dari multilinked list
+            if (pPrev != NULL)
+            {
+                pPrev->next = pCari->next;
+            }
+            else
+            {
+                pPlaylist->laguHead = pCari->next;
+            }
+
+            // Hapus lagu dari memori
+            delete pCari;
+
+            cout << "Lagu " << judul_lagu << " berhasil dihapus dari playlist " << pPlaylist->nama << "." << endl;
+        }
+
+        pPlaylist = pPlaylist->next;
+    }
+}
 void hapusLaguDariPlaylist(pointer_lagu &first, pointer_playlist &currentPlaylist, string judul_lagu)
 {
     if (currentPlaylist == NULL || currentPlaylist->laguHead == NULL)
@@ -735,6 +795,7 @@ void hapusLaguDariPlaylist(pointer_lagu &first, pointer_playlist &currentPlaylis
         string filePath = loc + currentPlaylist->nama + "\\" + judul_lagu + ext;
         if (remove(filePath.c_str()) != 0)
         {
+            cout << "cek" << endl;
             cerr << "Error: Gagal menghapus file lagu dari sistem file." << endl;
             return;
         }
@@ -776,6 +837,71 @@ void hapusLaguDariPlaylist(pointer_lagu &first, pointer_playlist &currentPlaylis
     else
     {
         cout << "Lagu " << judul_lagu << " tidak ditemukan dalam playlist." << endl;
+    }
+}
+void hapusLagu(pointer_lagu &first, pointer_playlist &firstPlaylist, string judul_lagu)
+{
+    bool isInAnyPlaylist = isInPlaylist(firstPlaylist, judul_lagu);
+
+    pointer_lagu pCari = first;
+    pointer_lagu pPrev = NULL;
+
+    // Cari lagu yang ingin dihapus
+    while (pCari != NULL && pCari->judul != judul_lagu)
+    {
+        pPrev = pCari;
+        pCari = pCari->next;
+    }
+
+    if (pCari != NULL)
+    {
+        // Hapus lagu dari sistem file jika lagu berada dalam playlist
+        if (isInAnyPlaylist)
+        {
+            string filePath = loc + pCari->judul + ext;
+            cout << filePath << endl;
+            if (remove(filePath.c_str()) != 0)
+            {
+                cerr << "Error: Gagal menghapus file lagu dari sistem file." << endl;
+                return;
+            }
+        }
+
+        // Hapus lagu dari linked list
+        if (pPrev != NULL)
+        {
+            pPrev->next = pCari->next;
+        }
+        else
+        {
+            first = pCari->next;
+        }
+
+        // Hapus lagu dari multilinked list jika lagu berada dalam playlist
+        if (isInAnyPlaylist)
+        {
+            hapusLaguDariPlaylist(first, firstPlaylist, pCari->judul);
+        }
+
+        // Hapus lagu dari memori
+        delete pCari;
+
+        cout << "Lagu " << judul_lagu << " berhasil dihapus." << endl;
+
+        // Tampilkan daftar lagu setelah penghapusan
+        cout << "Daftar Lagu setelah penghapusan:" << endl;
+        pointer_lagu pLagu = first;
+        int i = 1;
+        while (pLagu != NULL)
+        {
+            cout << i << ". " << pLagu->judul << endl;
+            pLagu = pLagu->next;
+            i++;
+        }
+    }
+    else
+    {
+        cout << "Lagu " << judul_lagu << " tidak ditemukan." << endl;
     }
 }
 
@@ -859,6 +985,12 @@ int main()
     playlistInit(firstPlaylist);
     int pilih;
 
+    const char *greenBackground = "\033[42m";
+    const char *blackText = "\033[30m";
+    const char *reset = "\033[0m";
+
+    // Set warna untuk keseluruhan output
+    cout << greenBackground << blackText;
     pointer_playlist playlistDiputar = NULL;
 
     do
@@ -909,6 +1041,8 @@ int main()
 
             createPlaylist(firstPlaylist, playlistName);
             cout << "Playlist " << playlistName << " berhasil dibuat." << endl;
+            system("pause");
+            system("cls");
         }
         break;
         case 3:
@@ -959,7 +1093,8 @@ int main()
 
             // Cari playlist yang diinginkan
             pointer_playlist pPlaylist = firstPlaylist;
-            while (pPlaylist != NULL && pPlaylist->nama != playlistName)
+            while (pPlaylist != NULL && strcmp(pPlaylist->nama.c_str(), playlistName.c_str()) != 0)
+
             {
                 pPlaylist = pPlaylist->next;
             }
@@ -978,6 +1113,8 @@ int main()
             {
                 cout << "Playlist " << playlistName << " tidak ditemukan." << endl;
             }
+            system("pause");
+            system("cls");
             break;
         }
         case 5:
@@ -1010,46 +1147,83 @@ int main()
         }
         case 7:
             playNextFromQueue(Q);
+            system("pause");
+            system("cls");
             break;
         case 8:
         {
-            cin.ignore();
-            string playlistName;
-            displayPlaylists(firstPlaylist, first);
-            cout << "Masukkan Nama Playlist: ";
-            getline(cin, playlistName);
+            int pil2;
 
-            // Cari playlist yang diinginkan
-            pointer_playlist pPlaylist = firstPlaylist;
-            while (pPlaylist != NULL && pPlaylist->nama != playlistName)
+            cout << "|======================|" << endl;
+            cout << "|      HAPUS LAGU      |" << endl;
+            cout << "|======================|" << endl;
+            cout << "1. Hapus dari Lokal" << endl;
+            cout << "2. Hapus dari Playlist" << endl;
+            cout << "Masukkan Pilihan Anda: ";
+            cin >> pil2;
+            switch (pil2)
             {
-                pPlaylist = pPlaylist->next;
+            case 1:
+            {
+
+                traversalLagu(first);
+                cout << "Masukkan Lagu yang ingin dihapus:" << endl;
+                cin.ignore();
+                getline(cin, judul_lagu);
+                hapusLagu(first, firstPlaylist, judul_lagu);
+                system("pause");
+                system("cls");
+                break;
             }
-
-            if (pPlaylist != NULL)
+            case 2:
             {
-                currentPlaylist = pPlaylist;
-                cout << "Playlist " << playlistName << " dipilih." << endl;
 
-                // Tampilkan lagu dalam playlist sebelum penghapusan
-                cout << "Daftar Lagu dalam Playlist " << currentPlaylist->nama << " sebelum penghapusan:" << endl;
-                pointer_lagu pLaguSebelum = currentPlaylist->laguHead;
-                int i = 1;
-                while (pLaguSebelum != NULL)
+                cin.ignore();
+                string playlistName;
+                displayPlaylists(firstPlaylist, first);
+                cout << "Masukkan Nama Playlist: ";
+                getline(cin, playlistName);
+
+                // Cari playlist yang diinginkan
+                pointer_playlist pPlaylist = firstPlaylist;
+                while (pPlaylist != NULL && pPlaylist->nama != playlistName)
                 {
-                    cout << i << ". " << pLaguSebelum->judul << endl;
-                    pLaguSebelum = pLaguSebelum->next;
-                    i++;
+                    pPlaylist = pPlaylist->next;
                 }
 
-                // Hapus lagu dari playlist
-                cout << "Masukkan Judul Lagu yang ingin dihapus: ";
-                getline(cin, judul_lagu);
-                hapusLaguDariPlaylist(first, currentPlaylist, judul_lagu);
+                if (pPlaylist != NULL)
+                {
+                    currentPlaylist = pPlaylist;
+                    cout << "Playlist " << playlistName << " dipilih." << endl;
+
+                    // Tampilkan lagu dalam playlist sebelum penghapusan
+                    cout << "Daftar Lagu dalam Playlist " << currentPlaylist->nama << " sebelum penghapusan:" << endl;
+                    pointer_lagu pLaguSebelum = currentPlaylist->laguHead;
+                    int i = 1;
+                    while (pLaguSebelum != NULL)
+                    {
+                        cout << i << ". " << pLaguSebelum->judul << endl;
+                        pLaguSebelum = pLaguSebelum->next;
+                        i++;
+                    }
+
+                    // Hapus lagu dari playlist
+                    cout << "Masukkan Judul Lagu yang ingin dihapus: ";
+                    getline(cin, judul_lagu);
+                    hapusLaguDariPlaylist(first, currentPlaylist, judul_lagu);
+                }
+                else
+                {
+                    cout << "Playlist " << playlistName << " tidak ditemukan." << endl;
+                }
+
+                system("pause");
+                system("cls");
+                break;
             }
-            else
-            {
-                cout << "Playlist " << playlistName << " tidak ditemukan." << endl;
+            default:
+                cout << "Pilihan tidak tersedia!" << endl;
+                break;
             }
             break;
         }
@@ -1082,24 +1256,6 @@ int main()
                 // Hapus folder playlist
                 deletePlaylistFolder(playlistName, firstPlaylist);
 
-                // // Hapus playlist dari linked list
-                // if (pPlaylist->prev != NULL)
-                // {
-                //     pPlaylist->prev->next = pPlaylist->next;
-                // }
-                // else
-                // {
-                //     firstPlaylist = pPlaylist->next;
-                // }
-
-                // if (pPlaylist->next != NULL)
-                // {
-                //     pPlaylist->next->prev = pPlaylist->prev;
-                // }
-
-                // // Hapus playlist dari memori
-                // delete pPlaylist;
-
                 cout << "Playlist " << playlistName << " berhasil dihapus." << endl;
             }
             else
@@ -1119,5 +1275,6 @@ int main()
             break;
         }
     } while (pilih != 12);
+    cout << reset;
     return 0;
 }
