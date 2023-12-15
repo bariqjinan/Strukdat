@@ -180,6 +180,7 @@ void displayQueue(Queue Q)
         {
             cout << i << ". " << qBantu->music << endl;
             qBantu = qBantu->next;
+            i++;
         } while (qBantu != Q.tail->next);
         cout << endl;
     }
@@ -1007,12 +1008,13 @@ int main()
         cout << "4. Tambahkan lagu ke playlist" << endl;
         cout << "5. Masukan Antrian" << endl;
         cout << "6. Tampilkan lagu dan playlist" << endl;
-        cout << "7. Putar lagu di Antrian" << endl;
-        cout << "8. Hapus lagu pengguna" << endl;
-        cout << "9. Hapus Antrian lagu" << endl;
-        cout << "10. Stop lagu pengguna" << endl;
-        cout << "11. Delete Playlist" << endl;
-        cout << "12.Keluar Program" << endl;
+        cout << "7. Tampilkan Antrian Lagu" << endl;
+        cout << "8. Putar lagu di Antrian" << endl;
+        cout << "9. Hapus lagu pengguna" << endl;
+        cout << "10.Hapus Antrian lagu" << endl;
+        cout << "11.Stop lagu pengguna" << endl;
+        cout << "12.Delete Playlist" << endl;
+        cout << "13.Keluar Program" << endl;
         cout << "Masukkan Pilihan : ";
         cin >> pilih;
         switch (pilih)
@@ -1146,11 +1148,15 @@ int main()
             break;
         }
         case 7:
+            displayQueue(Q);
+            system("pause");
+            break;
+        case 8:
             playNextFromQueue(Q);
             system("pause");
             system("cls");
             break;
-        case 8:
+        case 9:
         {
             int pil2;
 
@@ -1227,16 +1233,16 @@ int main()
             }
             break;
         }
-        case 9:
+        case 10:
             cout << Q.head->music << " dihapus dari antrean" << endl;
             deleteQueue(Q, qHapus);
             system("pause");
             system("cls");
             break;
-        case 10:
+        case 11:
             stopLagu();
             break;
-        case 11:
+        case 12:
         {
             cin.ignore();
             string playlistName;
@@ -1266,7 +1272,7 @@ int main()
             system("cls");
             break;
         }
-        case 12:
+        case 13:
             cout << "Program berhenti" << endl;
             cout << "Terima Kasih" << endl;
             break;
@@ -1274,7 +1280,7 @@ int main()
             cout << "Maaf pilihan Menu tidak tersedia" << endl;
             break;
         }
-    } while (pilih != 12);
+    } while (pilih != 13);
     cout << reset;
     return 0;
 }
